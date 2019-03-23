@@ -19,7 +19,7 @@
     <link href="https://fonts.googleapis.com/css?family=Raleway|Roboto" rel="stylesheet">
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="/app/assets/main.4369ee0be6b5756e149a.css" rel="stylesheet"></head>
+  <link href="/app/assets/main.2b094ca2bcdd600b4277.css" rel="stylesheet"></head>
 
 
 
@@ -43,6 +43,15 @@
       </div>
 
 	    <div class="header-buttons pull-right">
+
+        <span class="control ">
+          <a class="button is-info is-size-5" target="_blank" href="https://github.com/nametagtoken">
+            <span class="icon">
+              <i class="fab fa-github"></i>
+            </span>
+            <span>Github</span>
+          </a>
+        </span>
 
 	      <span class="control ">
       		<a class="button is-info is-size-5" target="_blank" href="https://opensea.io/category/nametagtoken">
@@ -178,8 +187,31 @@
 
 	<div class="hero-body">
 
-	  <div class="container" style="height:300px;" >
-	    <div class="content" id="nameslist" v-if="list.length > 0" v-cloak>
+
+    <div class="container" style="height:200px;" >
+      <div class="content" id="personalnameslist" v-if="list.length > 0" v-cloak>
+        <h4 class="title is-4">My Nametags</h4>
+        <div class="recent-tags-list blue-links" >
+
+            <span class="tag is-size-4" v-for="item in list"> <a v-bind:href="item.tokenURL" target="_blank"> {{item.tokenName}} </a> </span>
+
+
+      </div>
+        <div class="columns is-multiline">
+        <div class="column is-6">
+
+        </div>
+        <div class="column is-6">
+
+        </div>
+        </div>
+      </div>
+    </div>
+
+
+
+	  <div class="container" style="height:200px;" >
+	    <div class="content" id="recentnameslist" v-if="list.length > 0" v-cloak>
 	      <h4 class="title is-4">Recent Nametags</h4>
 	      <div class="recent-tags-list blue-links" >
 
@@ -231,19 +263,10 @@
             </div>
            </div>
 
-           <div class="columns" style="max-width:100%">
-             <div class="column" style="max-width:100%; word-wrap:break-word;">
-               <div v-if='tokenIdResultDecimal'>
-                Dec:  {{tokenIdResultDecimal}}
-               </div>
-             </div>
-
-           </div>
-
-           <div class="columns" style="max-width:100%">
-             <div class="column" style="max-width:100%; word-wrap:break-word;">
-               <div v-if='tokenIdResultHex'>
-                Hex: {{tokenIdResultHex}}
+           <div class="columns">
+             <div class="column">
+               <div>
+                 {{tokenIdResult}}
                </div>
              </div>
 
@@ -310,16 +333,6 @@
                <div>
                 <a v-bind:href='ownerURL' target="blank"> {{ownerResult}} </a>
                </div>
-             </div>
-             <div class="column">
-
-             </div>
-           </div>
-
-
-           <div class="columns">
-             <div class="column">
-
              </div>
              <div class="column">
                <div class="pull-right">
@@ -422,11 +435,21 @@
   <p>   <i class="fab fa-ethereum"></i> Nametag Token </p>
     </div>
   </div>
+
+  <div class="control is-centered full-width">
+    <a class="button is-info is-size-5" target="_blank" href="https://github.com/nametagtoken">
+      <span class="icon">
+        <i class="fab fa-github"></i>
+      </span>
+      <span>Github</span>
+    </a>
+  </div>
+
   <!-- end of footer -->
 </footer>
 
 
 
 
-  <script type="text/javascript" src="/main.4369ee0be6b5756e149a.js"></script></body>
+  <script type="text/javascript" src="/main.2b094ca2bcdd600b4277.js"></script></body>
 </html>

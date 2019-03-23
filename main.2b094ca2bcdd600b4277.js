@@ -32927,6 +32927,9 @@ var dashboardData;
 var nametagInput;
 var namesList;
 
+var recentNamesList;
+var personalNamesList;
+
 var tokenIdQuery;
 var tokenNameQuery;
 var tokenOwnerQuery;
@@ -32973,9 +32976,7 @@ class HomeRenderer {
       el: '#tokenIdQuery',
       data: {
         queryName: '',
-        tokenIdResult: '',
-        tokenIdResultDecimal: '',
-        tokenIdResultHex: ''
+        tokenIdResult: ''
       },
       methods: {
         onSubmit: function (event) {
@@ -33011,18 +33012,26 @@ class HomeRenderer {
       }
     });
 
-    namesList = new __WEBPACK_IMPORTED_MODULE_0_vue__["a" /* default */]({
-      el: '#nameslist',
+    recentNamesList = new __WEBPACK_IMPORTED_MODULE_0_vue__["a" /* default */]({
+      el: '#recentnameslist',
       data: {
         list: []
       }
     });
 
-    self.updateNamesList();
+    personalNamesList = new __WEBPACK_IMPORTED_MODULE_0_vue__["a" /* default */]({
+      el: '#personalnameslist',
+      data: {
+        list: []
+      }
+    });
+
+    self.updateRecentNamesList();
+    self.updatePersonalNamesList();
 
     setInterval(function () {
-      self.updateNamesList();
-    }, 8000);
+      self.updateRecentNamesList();
+    }, 24 * 1000);
   }
 
   async claimName(name) {
@@ -33102,32 +33111,8 @@ class HomeRenderer {
     });
 
     var tokenIdNumber = new BigNumber(tokenIdRaw).toFixed();
-    var tokenIdNumberHex = HomeRenderer.dec2hex(tokenIdNumber);
 
     __WEBPACK_IMPORTED_MODULE_0_vue__["a" /* default */].set(tokenIdQuery, 'tokenIdResult', tokenIdNumber);
-    __WEBPACK_IMPORTED_MODULE_0_vue__["a" /* default */].set(tokenIdQuery, 'tokenIdResultDecimal', tokenIdNumber);
-    __WEBPACK_IMPORTED_MODULE_0_vue__["a" /* default */].set(tokenIdQuery, 'tokenIdResultHex', '0x' + tokenIdNumberHex);
-  }
-
-  static dec2hex(str) {
-    // .toString(16) only works up to 2^53
-    var dec = str.toString().split(''),
-        sum = [],
-        hex = [],
-        i,
-        s;
-    while (dec.length) {
-      s = 1 * dec.shift();
-      for (i = 0; s || i < sum.length; i++) {
-        s += (sum[i] || 0) * 10;
-        sum[i] = s % 16;
-        s = (s - sum[i]) / 16;
-      }
-    }
-    while (sum.length) {
-      hex.push(sum.pop().toString(16));
-    }
-    return hex.join('');
   }
 
   async queryTokenName(tokenId) {
@@ -33175,6 +33160,23 @@ class HomeRenderer {
       });
     });
 
+    var containsOnlyLower = await new Promise(function (result, error) {
+      nametagContract.containsOnlyLower.call(name, function (err, res) {
+        if (err) {
+          return error(err);
+        }
+
+        result(res);
+      });
+    });
+
+    if (!containsOnlyLower) {
+      __WEBPACK_IMPORTED_MODULE_0_vue__["a" /* default */].set(nametagInput, 'nametagAvailable', false);
+      __WEBPACK_IMPORTED_MODULE_0_vue__["a" /* default */].set(nametagInput, 'showAvailability', true);
+
+      return;
+    }
+
     var tokenIdNumber = new BigNumber(tokenIdRaw).toFixed();
 
     console.log(tokenIdNumber);
@@ -33196,9 +33198,80 @@ class HomeRenderer {
     __WEBPACK_IMPORTED_MODULE_0_vue__["a" /* default */].set(nametagInput, 'showAvailability', true);
   }
 
-  async updateNamesList() {
+  async updatePersonalNamesList() {
+    var web3 = ethereumHelper.getWeb3Instance();
+
+    var localMetamaskAddress = ethereumHelper.getConnectedAccountAddress();
+
+    if (!web3) return;
+
+    var env = 'mainnet';
+
+    var nametagContract = ContractInterface.getNametagContract(web3, env);
+    console.log('update names list', nametagContract);
+
+    var currentEthBlock = await ethereumHelper.getCurrentEthBlockNumber();
+
+    const _CONTRACT_ADDRESS = "0x3c642be0bb6cb9151652b999b26d80155bcea7de";
+    const _TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+
+    console.log('localMetamaskAddress', localMetamaskAddress);
+
+    var localMetamaskAddressFixed = new BigNumber(localMetamaskAddress).toFixed();
+
+    var personalNames = [];
+
+    await web3.eth.filter({
+      fromBlock: currentEthBlock - 30 * 1000,
+      toBlock: currentEthBlock,
+      address: _CONTRACT_ADDRESS,
+      topics: [_TRANSFER_TOPIC, null]
+    }, async function (error, result) {
+
+      var fromAddress = result.topics[1];
+      var toAddress = result.topics[2];
+      var tokenIdHex = result.topics[3];
+      var tokenIdNumber = new BigNumber(tokenIdHex).toFixed();
+
+      //    var tokenName = await nametagContract.tokenURI.call( )
+
+      var tokenName = await new Promise(function (result, error) {
+        nametagContract.tokenURI.call(tokenIdNumber, function (err, res) {
+          if (err) {
+            return error(err);
+          }
+
+          result(res);
+        });
+      });
+
+      var toAddressFixed = new BigNumber(toAddress).toFixed();
+      console.log('???', toAddressFixed, localMetamaskAddressFixed);
+
+      if (toAddressFixed == localMetamaskAddressFixed) {
+        var nameData = {
+          to: toAddress,
+          tokenIdHex: tokenIdHex,
+          tokenIdNumber: tokenIdNumber,
+          tokenName: tokenName,
+          tokenURL: 'https://etherscan.io/token/' + _CONTRACT_ADDRESS + '?a=' + tokenIdNumber
+        };
+
+        console.log('learned', nameData);
+        if (personalNames.length < 35) {
+          personalNames.push(nameData);
+        }
+      }
+    });
+
+    __WEBPACK_IMPORTED_MODULE_0_vue__["a" /* default */].set(personalNamesList, 'list', personalNames);
+  }
+
+  async updateRecentNamesList() {
 
     var web3 = ethereumHelper.getWeb3Instance();
+
+    var localMetamaskAddress = ethereumHelper.getConnectedAccountAddress();
 
     if (!web3) return;
 
@@ -33215,32 +33288,6 @@ class HomeRenderer {
         });*/
 
     var currentEthBlock = await ethereumHelper.getCurrentEthBlockNumber();
-
-    /*  var events = nametagContract.allEvents({fromBlock: (currentEthBlock-200) }, function(error, log){
-           if (error) {
-             console.error(error);
-             return
-           }
-             console.log(log);
-          });
-          web3.eth.filter({fromBlock: (currentEthBlock-200), address: nametagContract.address },function(e,r){
-           if (e) {
-            console.error(e);
-            return
-          }
-            console.log(r);
-        })*/
-
-    /*  const _MINT_TOPIC = "0xcf6fbb9dcea7d07263ab4f5c3a92f53af33dffc421d9d121e1c74b307e68189d";
-      web3.eth.filter({
-        fromBlock: (currentEthBlock-3000),
-            toBlock: currentEthBlock,
-            address: '0xb6ed7644c69416d67b522e20bc294a9a9b405b31',
-            topics: [_MINT_TOPIC, null],
-      }, function(error,result)  {
-        console.log(error)
-         console.log("got filter results:", result, "transactions");
-        });*/
 
     const _CONTRACT_ADDRESS = "0x3c642be0bb6cb9151652b999b26d80155bcea7de";
     const _TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
@@ -33287,7 +33334,7 @@ class HomeRenderer {
       }
     });
 
-    __WEBPACK_IMPORTED_MODULE_0_vue__["a" /* default */].set(namesList, 'list', recentNames);
+    __WEBPACK_IMPORTED_MODULE_0_vue__["a" /* default */].set(recentNamesList, 'list', recentNames);
   }
 
   update(renderData) {}
@@ -49999,7 +50046,7 @@ module.exports = CipherBase;
 /* 223 */
 /***/ (function(module, exports) {
 
-module.exports = {"_args":[["elliptic@6.4.1","/home/andy/dev/nametag-web"]],"_from":"elliptic@6.4.1","_id":"elliptic@6.4.1","_inBundle":false,"_integrity":"sha512-BsXLz5sqX8OHcsh7CqBMztyXARmGQ3LWPtGjJi6DiJHq5C/qvi9P3OqgswKSDftbu8+IoI/QDTAm2fFnQ9SZSQ==","_location":"/elliptic","_phantomChildren":{},"_requested":{"type":"version","registry":true,"raw":"elliptic@6.4.1","name":"elliptic","escapedName":"elliptic","rawSpec":"6.4.1","saveSpec":null,"fetchSpec":"6.4.1"},"_requiredBy":["/browserify-sign","/create-ecdh","/eth-lib"],"_resolved":"https://registry.npmjs.org/elliptic/-/elliptic-6.4.1.tgz","_spec":"6.4.1","_where":"/home/andy/dev/nametag-web","author":{"name":"Fedor Indutny","email":"fedor@indutny.com"},"bugs":{"url":"https://github.com/indutny/elliptic/issues"},"dependencies":{"bn.js":"^4.4.0","brorand":"^1.0.1","hash.js":"^1.0.0","hmac-drbg":"^1.0.0","inherits":"^2.0.1","minimalistic-assert":"^1.0.0","minimalistic-crypto-utils":"^1.0.0"},"description":"EC cryptography","devDependencies":{"brfs":"^1.4.3","coveralls":"^2.11.3","grunt":"^0.4.5","grunt-browserify":"^5.0.0","grunt-cli":"^1.2.0","grunt-contrib-connect":"^1.0.0","grunt-contrib-copy":"^1.0.0","grunt-contrib-uglify":"^1.0.1","grunt-mocha-istanbul":"^3.0.1","grunt-saucelabs":"^8.6.2","istanbul":"^0.4.2","jscs":"^2.9.0","jshint":"^2.6.0","mocha":"^2.1.0"},"files":["lib"],"homepage":"https://github.com/indutny/elliptic","keywords":["EC","Elliptic","curve","Cryptography"],"license":"MIT","main":"lib/elliptic.js","name":"elliptic","repository":{"type":"git","url":"git+ssh://git@github.com/indutny/elliptic.git"},"scripts":{"jscs":"jscs benchmarks/*.js lib/*.js lib/**/*.js lib/**/**/*.js test/index.js","jshint":"jscs benchmarks/*.js lib/*.js lib/**/*.js lib/**/**/*.js test/index.js","lint":"npm run jscs && npm run jshint","test":"npm run lint && npm run unit","unit":"istanbul test _mocha --reporter=spec test/index.js","version":"grunt dist && git add dist/"},"version":"6.4.1"}
+module.exports = {"_args":[["elliptic@6.4.1","/home/andy/dev/nametag-web"]],"_from":"elliptic@6.4.1","_id":"elliptic@6.4.1","_inBundle":false,"_integrity":"sha512-BsXLz5sqX8OHcsh7CqBMztyXARmGQ3LWPtGjJi6DiJHq5C/qvi9P3OqgswKSDftbu8+IoI/QDTAm2fFnQ9SZSQ==","_location":"/elliptic","_phantomChildren":{},"_requested":{"type":"version","registry":true,"raw":"elliptic@6.4.1","name":"elliptic","escapedName":"elliptic","rawSpec":"6.4.1","saveSpec":null,"fetchSpec":"6.4.1"},"_requiredBy":["/browserify-sign","/create-ecdh","/eth-lib","/secp256k1"],"_resolved":"https://registry.npmjs.org/elliptic/-/elliptic-6.4.1.tgz","_spec":"6.4.1","_where":"/home/andy/dev/nametag-web","author":{"name":"Fedor Indutny","email":"fedor@indutny.com"},"bugs":{"url":"https://github.com/indutny/elliptic/issues"},"dependencies":{"bn.js":"^4.4.0","brorand":"^1.0.1","hash.js":"^1.0.0","hmac-drbg":"^1.0.0","inherits":"^2.0.1","minimalistic-assert":"^1.0.0","minimalistic-crypto-utils":"^1.0.0"},"description":"EC cryptography","devDependencies":{"brfs":"^1.4.3","coveralls":"^2.11.3","grunt":"^0.4.5","grunt-browserify":"^5.0.0","grunt-cli":"^1.2.0","grunt-contrib-connect":"^1.0.0","grunt-contrib-copy":"^1.0.0","grunt-contrib-uglify":"^1.0.1","grunt-mocha-istanbul":"^3.0.1","grunt-saucelabs":"^8.6.2","istanbul":"^0.4.2","jscs":"^2.9.0","jshint":"^2.6.0","mocha":"^2.1.0"},"files":["lib"],"homepage":"https://github.com/indutny/elliptic","keywords":["EC","Elliptic","curve","Cryptography"],"license":"MIT","main":"lib/elliptic.js","name":"elliptic","repository":{"type":"git","url":"git+ssh://git@github.com/indutny/elliptic.git"},"scripts":{"jscs":"jscs benchmarks/*.js lib/*.js lib/**/*.js lib/**/**/*.js test/index.js","jshint":"jscs benchmarks/*.js lib/*.js lib/**/*.js lib/**/**/*.js test/index.js","lint":"npm run jscs && npm run jshint","test":"npm run lint && npm run unit","unit":"istanbul test _mocha --reporter=spec test/index.js","version":"grunt dist && git add dist/"},"version":"6.4.1"}
 
 /***/ }),
 /* 224 */
