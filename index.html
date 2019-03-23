@@ -19,7 +19,7 @@
     <link href="https://fonts.googleapis.com/css?family=Raleway|Roboto" rel="stylesheet">
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="/app/assets/main.a619e6d669ebcf4f9753.css" rel="stylesheet"></head>
+  <link href="/app/assets/main.4369ee0be6b5756e149a.css" rel="stylesheet"></head>
 
 
 
@@ -233,8 +233,17 @@
 
            <div class="columns" style="max-width:100%">
              <div class="column" style="max-width:100%; word-wrap:break-word;">
-               <div>
-                 {{tokenIdResult}}
+               <div v-if='tokenIdResultDecimal'>
+                Dec:  {{tokenIdResultDecimal}}
+               </div>
+             </div>
+
+           </div>
+
+           <div class="columns" style="max-width:100%">
+             <div class="column" style="max-width:100%; word-wrap:break-word;">
+               <div v-if='tokenIdResultHex'>
+                Hex: {{tokenIdResultHex}}
                </div>
              </div>
 
@@ -419,5 +428,5 @@
 
 
 
-  <script type="text/javascript" src="/main.a619e6d669ebcf4f9753.js"></script></body>
+  <script type="text/javascript" src="/main.4369ee0be6b5756e149a.js"></script></body>
 </html>

@@ -32973,7 +32973,9 @@ class HomeRenderer {
       el: '#tokenIdQuery',
       data: {
         queryName: '',
-        tokenIdResult: ''
+        tokenIdResult: '',
+        tokenIdResultDecimal: '',
+        tokenIdResultHex: ''
       },
       methods: {
         onSubmit: function (event) {
@@ -33100,8 +33102,32 @@ class HomeRenderer {
     });
 
     var tokenIdNumber = new BigNumber(tokenIdRaw).toFixed();
+    var tokenIdNumberHex = HomeRenderer.dec2hex(tokenIdNumber);
 
     __WEBPACK_IMPORTED_MODULE_0_vue__["a" /* default */].set(tokenIdQuery, 'tokenIdResult', tokenIdNumber);
+    __WEBPACK_IMPORTED_MODULE_0_vue__["a" /* default */].set(tokenIdQuery, 'tokenIdResultDecimal', tokenIdNumber);
+    __WEBPACK_IMPORTED_MODULE_0_vue__["a" /* default */].set(tokenIdQuery, 'tokenIdResultHex', '0x' + tokenIdNumberHex);
+  }
+
+  static dec2hex(str) {
+    // .toString(16) only works up to 2^53
+    var dec = str.toString().split(''),
+        sum = [],
+        hex = [],
+        i,
+        s;
+    while (dec.length) {
+      s = 1 * dec.shift();
+      for (i = 0; s || i < sum.length; i++) {
+        s += (sum[i] || 0) * 10;
+        sum[i] = s % 16;
+        s = (s - sum[i]) / 16;
+      }
+    }
+    while (sum.length) {
+      hex.push(sum.pop().toString(16));
+    }
+    return hex.join('');
   }
 
   async queryTokenName(tokenId) {
